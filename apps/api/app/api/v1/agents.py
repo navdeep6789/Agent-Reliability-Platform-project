@@ -79,7 +79,9 @@ def get_agent_detail(
     recent_findings = db.query(ReliabilityFindingModel).join(
         RunModel, ReliabilityFindingModel.run_id == RunModel.run_id
     ).filter(
-        RunModel.agent_name == agent_name
+        RunModel.agent_name == agent_name,
+        RunModel.project_id == project_id,
+        ReliabilityFindingModel.project_id == project_id
     ).order_by(ReliabilityFindingModel.created_at.desc()).limit(10).all()
 
     return {

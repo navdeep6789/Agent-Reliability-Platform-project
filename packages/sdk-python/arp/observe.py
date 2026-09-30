@@ -106,6 +106,7 @@ class Observer:
         capture_tool_results: bool = False,
         redact_keys: bool = True,
         redact_emails: bool = True,
+        fail_closed: bool = False,
         direct_handler: Optional[Any] = None
     ) -> None:
         self.project_id = project_id
@@ -114,12 +115,14 @@ class Observer:
         self.capture_completion_content = capture_completion_content
         self.capture_tool_arguments = capture_tool_arguments
         self.capture_tool_results = capture_tool_results
+        self.fail_closed = fail_closed
         self.redaction = RedactionPipeline(redact_keys=redact_keys, redact_emails=redact_emails)
         self.exporter = TelemetryExporter(
             endpoint=endpoint,
             api_key=api_key,
             project_id=project_id,
             environment=environment,
+            fail_closed=fail_closed,
             direct_handler=direct_handler
         )
 
@@ -127,7 +130,8 @@ class Observer:
         if self.exporter is None:
             self.exporter = TelemetryExporter(
                 project_id=self.project_id,
-                environment=self.environment
+                environment=self.environment,
+                fail_closed=self.fail_closed
             )
         return self.exporter
 
@@ -190,8 +194,13 @@ class Observer:
         finally:
             span.finish()
             pop_span_id()
-            self._get_exporter().enqueue_span(span.to_dict())
-            self._get_exporter().flush()
+            try:
+                self._get_exporter().enqueue_span(span.to_dict())
+                self._get_exporter().flush()
+            except Exception as e:
+                if getattr(self._get_exporter(), "fail_closed", False):
+                    raise
+                # Graceful fail-open: never crash user agent if observability export fails
 
     @contextmanager
     def llm(
@@ -238,7 +247,12 @@ class Observer:
         finally:
             span.finish()
             pop_span_id()
-            self._get_exporter().enqueue_span(span.to_dict())
+            try:
+                self._get_exporter().enqueue_span(span.to_dict())
+            except Exception as e:
+                if getattr(self._get_exporter(), "fail_closed", False):
+                    raise
+                # Fail-open: preserve user execution
 
     @contextmanager
     def tool(
@@ -287,7 +301,12 @@ class Observer:
         finally:
             span.finish()
             pop_span_id()
-            self._get_exporter().enqueue_span(span.to_dict())
+            try:
+                self._get_exporter().enqueue_span(span.to_dict())
+            except Exception as e:
+                if getattr(self._get_exporter(), "fail_closed", False):
+                    raise
+                # Fail-open: preserve user execution
 
     def _classify_error(self, exc: Exception) -> str:
         msg = str(exc).lower()
@@ -356,7 +375,12 @@ class Observer:
             "retrieval.query": self.redaction.redact_text(query) if (self.capture_prompt_content and query) else "[REDACTED]"
         })
         span.finish()
-        self._get_exporter().enqueue_span(span.to_dict())
+        try:
+            self._get_exporter().enqueue_span(span.to_dict())
+        except Exception as e:
+            if getattr(self._get_exporter(), "fail_closed", False):
+                raise
+            # Fail-open
 
     def flush(self) -> None:
         if self.exporter:

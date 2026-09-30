@@ -14,12 +14,16 @@ def list_policies(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
+    project_id = auth.get("project_id", "proj_default_production")
     policies = policy_engine.list_policies()
     
-    # Calculate violation counts for each policy
+    # Calculate violation counts for each policy in this project
     results = []
     for p in policies:
-        v_count = db.query(PolicyViolationModel).filter(PolicyViolationModel.rule_type == p.rule_type).count()
+        v_count = db.query(PolicyViolationModel).filter(
+            PolicyViolationModel.rule_type == p.rule_type,
+            PolicyViolationModel.project_id == project_id
+        ).count()
         results.append({
             "id": p.id,
             "name": p.name,
@@ -56,7 +60,8 @@ def list_violations(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
-    query = db.query(PolicyViolationModel)
+    project_id = auth.get("project_id", "proj_default_production")
+    query = db.query(PolicyViolationModel).filter(PolicyViolationModel.project_id == project_id)
     if rule_type:
         query = query.filter(PolicyViolationModel.rule_type == rule_type)
 

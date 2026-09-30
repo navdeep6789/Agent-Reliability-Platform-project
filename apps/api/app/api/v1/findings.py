@@ -19,14 +19,17 @@ def list_findings(
     db: Session = Depends(get_db)
 ):
     project_id = auth.get("project_id", "proj_default_production")
-    query = db.query(ReliabilityFindingModel)
+    query = db.query(ReliabilityFindingModel).filter(ReliabilityFindingModel.project_id == project_id)
 
     if finding_type:
         query = query.filter(ReliabilityFindingModel.finding_type == finding_type)
     if severity:
         query = query.filter(ReliabilityFindingModel.severity == severity)
     if agent_name:
-        query = query.join(RunModel, ReliabilityFindingModel.run_id == RunModel.run_id).filter(RunModel.agent_name == agent_name)
+        query = query.join(RunModel, ReliabilityFindingModel.run_id == RunModel.run_id).filter(
+            RunModel.agent_name == agent_name,
+            RunModel.project_id == project_id
+        )
 
     findings = query.order_by(ReliabilityFindingModel.created_at.desc()).limit(limit).all()
 

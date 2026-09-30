@@ -52,11 +52,17 @@ def get_trace(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
+    project_id = auth.get("project_id")
+    run = db.query(RunModel).filter(
+        RunModel.trace_id == trace_id,
+        RunModel.project_id == project_id
+    ).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Trace not found or unauthorized")
+
     spans = db.query(SpanModel).filter(SpanModel.trace_id == trace_id).order_by(SpanModel.start_time.asc()).all()
     if not spans:
-        raise HTTPException(status_code=404, detail="Trace not found")
-
-    run = db.query(RunModel).filter(RunModel.trace_id == trace_id).first()
+        raise HTTPException(status_code=404, detail="Trace spans not found")
 
     span_list = []
     for s in spans:
@@ -106,13 +112,22 @@ def get_trace_waterfall(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
+    project_id = auth.get("project_id")
+    run = db.query(RunModel).filter(
+        RunModel.trace_id == trace_id,
+        RunModel.project_id == project_id
+    ).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Trace not found or unauthorized")
+
     spans = db.query(SpanModel).filter(SpanModel.trace_id == trace_id).order_by(SpanModel.start_time.asc()).all()
     if not spans:
-        raise HTTPException(status_code=404, detail="Trace not found")
+        raise HTTPException(status_code=404, detail="Trace spans not found")
 
     min_start = min(s.start_time for s in spans)
     max_end = max((s.end_time or s.start_time) for s in spans)
-    total_trace_duration_ms = max((max_end - min_start).total_seconds() * 1000.0, 1.0)
+    raw_duration = (max_end - min_start).total_seconds() * 1000.0
+    total_trace_duration_ms = max(raw_duration, 1.0)
 
     # Build span nodes
     nodes: Dict[str, Dict[str, Any]] = {}

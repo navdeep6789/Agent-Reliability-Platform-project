@@ -20,6 +20,42 @@ def parse_iso_or_timestamp(val: Any) -> datetime:
             pass
     return datetime.utcnow()
 
+MAX_ATTRIBUTE_COUNT = 128
+MAX_ATTRIBUTE_KEY_LENGTH = 128
+MAX_ATTRIBUTE_VALUE_LENGTH = 16384
+
+def sanitize_attributes(attrs: Any) -> Dict[str, Any]:
+    if isinstance(attrs, str):
+        try:
+            attrs = json.loads(attrs)
+        except Exception:
+            attrs = {"raw_text": attrs[:MAX_ATTRIBUTE_VALUE_LENGTH]}
+    if not isinstance(attrs, dict):
+        return {}
+
+    sanitized = {}
+    for i, (k, v) in enumerate(attrs.items()):
+        if i >= MAX_ATTRIBUTE_COUNT:
+            break
+        safe_key = str(k)[:MAX_ATTRIBUTE_KEY_LENGTH]
+        if isinstance(v, str):
+            if len(v) > MAX_ATTRIBUTE_VALUE_LENGTH:
+                safe_val = v[:MAX_ATTRIBUTE_VALUE_LENGTH] + "... [TRUNCATED]"
+            else:
+                safe_val = v
+        elif isinstance(v, (int, float, bool)) or v is None:
+            safe_val = v
+        elif isinstance(v, (dict, list)):
+            v_str = json.dumps(v)
+            if len(v_str) > MAX_ATTRIBUTE_VALUE_LENGTH:
+                safe_val = v_str[:MAX_ATTRIBUTE_VALUE_LENGTH] + "... [TRUNCATED]"
+            else:
+                safe_val = v
+        else:
+            safe_val = str(v)[:MAX_ATTRIBUTE_VALUE_LENGTH]
+        sanitized[safe_key] = safe_val
+    return sanitized
+
 class SpanNormalizer:
     @staticmethod
     def normalize_sdk_span(raw_span: Dict[str, Any]) -> Dict[str, Any]:
@@ -31,15 +67,17 @@ class SpanNormalizer:
         if duration_ms == 0.0 and end_time and start_time:
             duration_ms = (end_time - start_time).total_seconds() * 1000.0
 
-        attrs = raw_span.get("attributes", {})
-        if isinstance(attrs, str):
-            try:
-                attrs = json.loads(attrs)
-            except Exception:
-                attrs = {}
+        # Prevent negative durations from clock skew or out-of-order timestamps
+        duration_ms = max(duration_ms, 0.0)
+
+        attrs = sanitize_attributes(raw_span.get("attributes", {}))
+
+        span_id = str(raw_span.get("span_id") or f"span_{int(datetime.utcnow().timestamp()*1000)}")
+        trace_id = str(raw_span.get("trace_id") or f"trace_{int(datetime.utcnow().timestamp()*1000)}")
+        run_id = str(raw_span.get("run_id") or trace_id)
 
         span_type = raw_span.get("span_type")
-        name = raw_span.get("name", "")
+        name = str(raw_span.get("name") or "span")[:256]
 
         # Infer span_type if custom
         if not span_type or span_type == "custom":
@@ -59,9 +97,9 @@ class SpanNormalizer:
             status = "error" if "fail" in str(status).lower() or "err" in str(status).lower() else "ok"
 
         return {
-            "span_id": raw_span.get("span_id"),
-            "trace_id": raw_span.get("trace_id"),
-            "run_id": raw_span.get("run_id"),
+            "span_id": span_id,
+            "trace_id": trace_id,
+            "run_id": run_id,
             "parent_span_id": raw_span.get("parent_span_id"),
             "name": name,
             "span_type": span_type,
@@ -69,9 +107,9 @@ class SpanNormalizer:
             "end_time": end_time,
             "duration_ms": round(duration_ms, 2),
             "status": status,
-            "status_message": raw_span.get("status_message"),
+            "status_message": str(raw_span.get("status_message") or "")[:1024] if raw_span.get("status_message") else None,
             "attributes": attrs,
-            "events": raw_span.get("events", [])
+            "events": raw_span.get("events", []) if isinstance(raw_span.get("events"), list) else []
         }
 
     @staticmethod
@@ -87,7 +125,8 @@ class SpanNormalizer:
 
         start_time = parse_iso_or_timestamp(start_time_unix) if start_time_unix else datetime.utcnow()
         end_time = parse_iso_or_timestamp(end_time_unix) if end_time_unix else datetime.utcnow()
-        duration_ms = (end_time - start_time).total_seconds() * 1000.0
+        raw_dur = (end_time - start_time).total_seconds() * 1000.0
+        duration_ms = max(raw_dur, 0.0)
 
         # Unpack OTLP key-value attributes list
         attributes = dict(resource_attrs or {})
@@ -100,6 +139,11 @@ class SpanNormalizer:
                     attributes[key] = v
         elif isinstance(raw_attrs, dict):
             attributes.update(raw_attrs)
+
+        attributes = sanitize_attributes(attributes)
+
+        span_id = str(span_id or f"span_{int(datetime.utcnow().timestamp()*1000)}")
+        trace_id = str(trace_id or f"trace_{int(datetime.utcnow().timestamp()*1000)}")
 
         run_id = attributes.get("arp.run.id") or trace_id
         span_type = attributes.get("arp.span.type")

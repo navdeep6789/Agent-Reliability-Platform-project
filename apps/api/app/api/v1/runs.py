@@ -57,13 +57,23 @@ def get_run(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
-    run = db.query(RunModel).filter(RunModel.run_id == run_id).first()
+    project_id = auth.get("project_id")
+    run = db.query(RunModel).filter(
+        RunModel.run_id == run_id,
+        RunModel.project_id == project_id
+    ).first()
     if not run:
-        raise HTTPException(status_code=404, detail="Run not found")
+        raise HTTPException(status_code=404, detail="Run not found or unauthorized")
 
     spans_count = db.query(SpanModel).filter(SpanModel.run_id == run_id).count()
-    violations_count = db.query(PolicyViolationModel).filter(PolicyViolationModel.run_id == run_id).count()
-    findings_count = db.query(ReliabilityFindingModel).filter(ReliabilityFindingModel.run_id == run_id).count()
+    violations_count = db.query(PolicyViolationModel).filter(
+        PolicyViolationModel.run_id == run_id,
+        PolicyViolationModel.project_id == project_id
+    ).count()
+    findings_count = db.query(ReliabilityFindingModel).filter(
+        ReliabilityFindingModel.run_id == run_id,
+        ReliabilityFindingModel.project_id == project_id
+    ).count()
 
     return {
         "run_id": run.run_id,
@@ -94,9 +104,13 @@ def get_run_report(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
-    run = db.query(RunModel).filter(RunModel.run_id == run_id).first()
+    project_id = auth.get("project_id")
+    run = db.query(RunModel).filter(
+        RunModel.run_id == run_id,
+        RunModel.project_id == project_id
+    ).first()
     if not run:
-        raise HTTPException(status_code=404, detail="Run not found")
+        raise HTTPException(status_code=404, detail="Run not found or unauthorized")
 
     spans = db.query(SpanModel).filter(SpanModel.run_id == run_id).order_by(SpanModel.start_time.asc()).all()
     spans_dicts = []

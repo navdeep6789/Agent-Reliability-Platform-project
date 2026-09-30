@@ -37,7 +37,8 @@ def list_eval_runs(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
-    query = db.query(EvaluationRunModel)
+    project_id = auth.get("project_id", "proj_default_production")
+    query = db.query(EvaluationRunModel).filter(EvaluationRunModel.project_id == project_id)
     if agent_name:
         query = query.filter(EvaluationRunModel.agent_name == agent_name)
 
@@ -68,9 +69,13 @@ def get_eval_run_detail(
     auth: dict = Depends(verify_api_key),
     db: Session = Depends(get_db)
 ):
-    run = db.query(EvaluationRunModel).filter(EvaluationRunModel.id == eval_run_id).first()
+    project_id = auth.get("project_id", "proj_default_production")
+    run = db.query(EvaluationRunModel).filter(
+        EvaluationRunModel.id == eval_run_id,
+        EvaluationRunModel.project_id == project_id
+    ).first()
     if not run:
-        raise HTTPException(status_code=404, detail="Evaluation run not found")
+        raise HTTPException(status_code=404, detail="Evaluation run not found or unauthorized")
 
     cases = db.query(EvaluationCaseResultModel).filter(
         EvaluationCaseResultModel.eval_run_id == eval_run_id

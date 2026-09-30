@@ -5,6 +5,8 @@ from ...ingestion.pipeline import pipeline
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 
+MAX_INGESTION_BATCH_SIZE = 500
+
 @router.post("/spans")
 async def ingest_spans(
     payload: Dict[str, Any],
@@ -14,6 +16,12 @@ async def ingest_spans(
     spans = payload.get("spans", [])
     if not isinstance(spans, list):
         raise HTTPException(status_code=400, detail="Expected 'spans' list in payload")
+
+    if len(spans) > MAX_INGESTION_BATCH_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Batch size exceeds maximum limit of {MAX_INGESTION_BATCH_SIZE} spans per request"
+        )
 
     project_id = auth.get("project_id", "proj_default_production")
     environment = auth.get("environment", "production")

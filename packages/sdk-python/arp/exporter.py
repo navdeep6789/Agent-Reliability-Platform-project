@@ -61,9 +61,13 @@ class TelemetryExporter:
                 continue
 
             if items:
-                self._send_batch(items)
-                for _ in items:
-                    self.queue.task_done()
+                try:
+                    self._send_batch(items)
+                except Exception as e:
+                    logger.warning(f"Background exporter error: {e}")
+                finally:
+                    for _ in items:
+                        self.queue.task_done()
 
     def _send_batch(self, items: List[Dict[str, Any]]) -> bool:
         if not items:
