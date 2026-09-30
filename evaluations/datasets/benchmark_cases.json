@@ -1,0 +1,229 @@
+[
+  {
+    "id": "case_cs_01",
+    "dataset_id": "dataset_customer_support",
+    "name": "Order Status Inquiry - Standard Shipping",
+    "input": {"query": "Where is my order ord_8829?", "customer_id": "cust_101"},
+    "expected_output": "order ord_8829 is currently in transit",
+    "expected_tools": ["crm.lookup_customer"],
+    "required_citations": [],
+    "evaluator_type": "exact_match"
+  },
+  {
+    "id": "case_cs_02",
+    "dataset_id": "dataset_customer_support",
+    "name": "Refund Policy Verification - Return Request",
+    "input": {"query": "Can I return an opened electronic item after 14 days?", "customer_id": "cust_102"},
+    "expected_output": "return window",
+    "expected_tools": ["support_kb", "crm.lookup_customer"],
+    "required_citations": ["support_kb"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_cs_03",
+    "dataset_id": "dataset_customer_support",
+    "name": "Address Modification with Transient Gateway Failure",
+    "input": {"query": "Change delivery address to 123 Elm St", "customer_id": "cust_retry_412"},
+    "expected_output": "updated",
+    "expected_tools": ["crm.lookup_customer"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_cs_04",
+    "dataset_id": "dataset_customer_support",
+    "name": "Billing Dispute - Invoice Discrepancy",
+    "input": {"query": "Why was I charged twice for subscription renewal?", "customer_id": "cust_104"},
+    "expected_output": "duplicate charge investigated",
+    "expected_tools": ["crm.lookup_customer"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_cs_05",
+    "dataset_id": "dataset_customer_support",
+    "name": "Account Security - Password Reset Link",
+    "input": {"query": "I cannot access my email to reset credentials", "customer_id": "cust_105"},
+    "expected_output": "secondary verification",
+    "expected_tools": ["crm.lookup_customer"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_cs_06",
+    "dataset_id": "dataset_customer_support",
+    "name": "Cancellation During Active Transit",
+    "input": {"query": "Stop package and issue immediate refund", "customer_id": "cust_106"},
+    "expected_output": "cannot be cancelled in transit",
+    "expected_tools": ["crm.lookup_customer"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_cs_07",
+    "dataset_id": "dataset_customer_support",
+    "name": "International Customs Clearance Query",
+    "input": {"query": "Customs clearance delay for tracking UK-9812", "customer_id": "cust_107"},
+    "expected_output": "cleared customs",
+    "expected_tools": ["support_kb"],
+    "evaluator_type": "citation_presence"
+  },
+  {
+    "id": "case_cs_08",
+    "dataset_id": "dataset_customer_support",
+    "name": "VIP Enterprise SLA Escalation",
+    "input": {"query": "P1 server downtime, route to dedicated TAM", "customer_id": "cust_vip_108"},
+    "expected_output": "escalated to enterprise engineering",
+    "expected_tools": ["crm.lookup_customer"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_res_01",
+    "dataset_id": "dataset_research_agent",
+    "name": "Byzantine Fault Tolerance Latency Benchmarks",
+    "input": {"topic": "BFT consensus throughput in high-churn networks"},
+    "expected_output": "throughput",
+    "expected_tools": ["search.web_query", "academic_corpus"],
+    "required_citations": ["https://arxiv.org/abs/2405.0192"],
+    "evaluator_type": "citation_presence"
+  },
+  {
+    "id": "case_res_02",
+    "dataset_id": "dataset_research_agent",
+    "name": "Vector Database Indexing Tradeoffs",
+    "input": {"topic": "HNSW graph construction speed vs IVFFlat memory usage"},
+    "expected_output": "memory footprint",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_res_03",
+    "dataset_id": "dataset_research_agent",
+    "name": "Structured JSON Architecture Synthesis",
+    "input": {"topic": "Generate comparative schema between Raft and Paxos"},
+    "expected_schema": {"type": "object", "required": ["consensus", "leader_election", "log_replication"]},
+    "evaluator_type": "json_schema"
+  },
+  {
+    "id": "case_res_04",
+    "dataset_id": "dataset_research_agent",
+    "name": "Distributed Tracing Overhead Analysis",
+    "input": {"topic": "OTel tail sampling vs head sampling CPU overhead"},
+    "expected_output": "tail sampling incurs buffer overhead",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_res_05",
+    "dataset_id": "dataset_research_agent",
+    "name": "Context Growth Stress Test Query",
+    "input": {"topic": "Recursive formal verification and symbolic theorem proving"},
+    "expected_output": "synthesis",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_res_06",
+    "dataset_id": "dataset_research_agent",
+    "name": "LLM Inference Quantization Benchmarks",
+    "input": {"topic": "FP8 vs INT4 perplexity loss on Llama-3"},
+    "expected_output": "perplexity degradation minimal",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_res_07",
+    "dataset_id": "dataset_research_agent",
+    "name": "Speculative Decoding Latency Speedup",
+    "input": {"topic": "Draft model verification acceptance rate"},
+    "expected_output": "acceptance rate",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_res_08",
+    "dataset_id": "dataset_research_agent",
+    "name": "Cache Poisoning Vulnerability Survey",
+    "input": {"topic": "Prompt injection payload in vector embeddings"},
+    "expected_output": "sanitization",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_res_09",
+    "dataset_id": "dataset_research_agent",
+    "name": "Long-Context Needle in a Haystack Evaluation",
+    "input": {"topic": "Retrieval accuracy across 128k token context windows"},
+    "expected_output": "retrieval recall",
+    "expected_tools": ["search.web_query"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_01",
+    "dataset_id": "dataset_data_agent",
+    "name": "Revenue Aggregation by Tier",
+    "input": {"question": "What is the total revenue for enterprise accounts?"},
+    "expected_output": "12,840.50",
+    "expected_tools": ["db.get_schema", "db.execute_sql"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_02",
+    "dataset_id": "dataset_data_agent",
+    "name": "Schema Discovery on Billing Relations",
+    "input": {"question": "List foreign keys linking users and billing_events"},
+    "expected_output": "user_id",
+    "expected_tools": ["db.get_schema"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_03",
+    "dataset_id": "dataset_data_agent",
+    "name": "Syntax Error Resiliency in Generated SQL",
+    "input": {"question": "Extract distinct payment gateways from payments table"},
+    "expected_output": "syntax error handled",
+    "expected_tools": ["db.execute_sql"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_04",
+    "dataset_id": "dataset_data_agent",
+    "name": "Cohort Retention Calculation",
+    "input": {"question": "Calculate day 30 retention percentage for Q1 signups"},
+    "expected_output": "retention rate",
+    "expected_tools": ["db.execute_sql"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_data_05",
+    "dataset_id": "dataset_data_agent",
+    "name": "Median Latency Percentile Query",
+    "input": {"question": "Calculate p50 and p95 checkout response times"},
+    "expected_output": "percentile",
+    "expected_tools": ["db.execute_sql"],
+    "evaluator_type": "response_length"
+  },
+  {
+    "id": "case_data_06",
+    "dataset_id": "dataset_data_agent",
+    "name": "Active User Count in Last 24 Hours",
+    "input": {"question": "Count distinct active users between yesterday and today"},
+    "expected_output": "active users",
+    "expected_tools": ["db.get_schema", "db.execute_sql"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_07",
+    "dataset_id": "dataset_data_agent",
+    "name": "Churn Prediction Feature Extraction",
+    "input": {"question": "Extract average session duration for churned accounts"},
+    "expected_output": "session duration",
+    "expected_tools": ["db.execute_sql"],
+    "evaluator_type": "tool_selection"
+  },
+  {
+    "id": "case_data_08",
+    "dataset_id": "dataset_data_agent",
+    "name": "Anomalous Transaction Volume Detection",
+    "input": {"question": "Identify billing events exceeding 3 standard deviations from mean"},
+    "expected_output": "anomalies detected",
+    "expected_tools": ["db.execute_sql"],
+    "evaluator_type": "tool_selection"
+  }
+]

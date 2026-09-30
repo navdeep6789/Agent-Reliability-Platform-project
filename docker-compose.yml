@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: arp_user
+      POSTGRES_PASSWORD: arp_password
+      POSTGRES_DB: arp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arp_user -d arp_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: arp-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: arp_analytics
+      CLICKHOUSE_USER: arp_analytics_user
+      CLICKHOUSE_PASSWORD: arp_analytics_password
+    ports:
+      - "8123:8123" # HTTP interface
+      - "9000:9000" # Native TCP client
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: arp-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./collector/otel-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8888:8888" # Collector internal metrics
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: arp-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://arp_user:arp_password@postgres:5432/arp_db
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_DB=arp_analytics
+      - CLICKHOUSE_USER=arp_analytics_user
+      - CLICKHOUSE_PASSWORD=arp_analytics_password
+      - MASTER_API_KEY=arp_live_master_secret_key_change_in_production
+      - ENVIRONMENT=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    container_name: arp-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  clickhouse_data:
